@@ -91,7 +91,7 @@ export default function About() {
 
       <Section id="technology" label="Under the Hood" title="Technology">
         <p className="font-body text-text-mid text-sm leading-relaxed mb-4">
-          NairobiAlert is a rebuild of the original PHP/MySQL system using a modern,
+          NairobiAlert is a modern,
           real-time stack designed for reliability during crisis events.
         </p>
         <div className="bg-white border border-border rounded-radius p-4 shadow-sm">

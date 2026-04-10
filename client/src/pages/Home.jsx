@@ -127,7 +127,7 @@ function Hero() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
           </span>
-          <span className="font-mono text-xs text-white/60">Live data from Firestore</span>
+          <span className="font-mono text-xs text-white/60">Live data</span>
         </div>
       </div>
 

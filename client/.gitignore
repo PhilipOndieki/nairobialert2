@@ -41,3 +41,8 @@ Thumbs.db
 .firebase/
 firebase-debug.log
 firestore-debug.log
+
+# Agents/skills
+.agents/skills
+.claude
+.kiro
