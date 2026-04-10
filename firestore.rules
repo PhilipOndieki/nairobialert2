@@ -1,0 +1,151 @@
+// File: firestore.rules
+// Purpose: Firestore security rules — public read for open incidents, authenticated writes,
+//          public create for report form with field validation
+// Version: 2023+
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+
+    // Check if the request is from an authenticated user (admin)
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Validate incident fields on creation (public report form)
+    function validIncidentCreate() {
+      let data = request.resource.data;
+      return
+        // Required string fields
+        data.type is string && data.type.size() > 0 &&
+        data.type in ['flood', 'landslide', 'blocked', 'rescue', 'shelter', 'other'] &&
+
+        data.severity is string &&
+        data.severity in ['critical', 'warning', 'info'] &&
+
+        data.zone_name is string && data.zone_name.size() > 0 &&
+
+        data.description is string && data.description.size() >= 10 &&
+
+        data.source is string && data.source in ['web', 'sms', 'ussd', 'admin'] &&
+
+        // Status must always be pending on creation
+        data.status == 'pending' &&
+
+        // Numeric fields
+        data.people_affected is int && data.people_affected >= 0 &&
+        data.lat is number &&
+        data.lng is number &&
+
+        // created_at must be server timestamp
+        data.created_at == request.time &&
+
+        // Nullable fields must exist with correct types or null
+        (data.reporter_phone == null || data.reporter_phone is string) &&
+        (data.verified_by == null) &&
+        (data.verified_at == null);
+    }
+
+    // Validate incident fields on update (admin verify/reject/resolve)
+    function validIncidentUpdate() {
+      let data = request.resource.data;
+      return
+        data.status is string &&
+        data.status in ['pending', 'open', 'rejected', 'resolved'];
+    }
+
+    // Validate zone document fields
+    function validZone() {
+      let data = request.resource.data;
+      return
+        data.name is string && data.name.size() > 0 &&
+        data.lat is number &&
+        data.lng is number &&
+        data.radius is number && data.radius > 0 &&
+        data.risk_level in ['critical', 'warning', 'watch', 'safe'] &&
+        data.population is string;
+    }
+
+    // Validate team document fields
+    function validTeam() {
+      let data = request.resource.data;
+      return
+        data.code is string && data.code.size() > 0 &&
+        data.name is string && data.name.size() > 0 &&
+        data.organisation is string &&
+        data.members is int && data.members >= 0 &&
+        data.status in ['standby', 'deployed', 'enroute'] &&
+        data.location is string &&
+        data.task is string;
+    }
+
+    // Validate shelter document fields
+    function validShelter() {
+      let data = request.resource.data;
+      return
+        data.name is string && data.name.size() > 0 &&
+        data.address is string &&
+        data.lat is number &&
+        data.lng is number &&
+        data.capacity is int && data.capacity > 0 &&
+        data.occupancy is int && data.occupancy >= 0 &&
+        data.is_open is bool;
+    }
+
+    // ── Incidents ─────────────────────────────────────────────────────────────
+    match /incidents/{incidentId} {
+      // Public read: only approved (open) incidents are readable without auth.
+      // Authenticated admins can read all incidents.
+      allow read: if
+        (resource.data.status == 'open') ||
+        isAuth();
+
+      // Public create: report form, no auth required, field validation enforced
+      allow create: if validIncidentCreate();
+
+      // Authenticated write: admins verify, reject, resolve
+      allow update: if isAuth() && validIncidentUpdate();
+
+      // Only authenticated admins can delete (not exposed in UI but secured)
+      allow delete: if isAuth();
+    }
+
+    // ── Zones ─────────────────────────────────────────────────────────────────
+    match /zones/{zoneId} {
+      // Public read: anyone can view zone risk levels
+      allow read: if true;
+
+      // Authenticated write only
+      allow create: if isAuth() && validZone();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // ── Shelters ──────────────────────────────────────────────────────────────
+    match /shelters/{shelterId} {
+      // Public read: anyone can view shelter info
+      allow read: if true;
+
+      // Authenticated write only
+      allow create: if isAuth() && validShelter();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // ── Teams ─────────────────────────────────────────────────────────────────
+    match /teams/{teamId} {
+      // Public read: team info visible on public map
+      allow read: if true;
+
+      // Authenticated write only
+      allow create: if isAuth() && validTeam();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // ── Default: deny all other collections ──────────────────────────────────
+    // No wildcard allow-all rule. Any collection not listed above is denied.
+  }
+}

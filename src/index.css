@@ -1,0 +1,72 @@
+/* File: src/index.css
+   Purpose: Google Fonts import and Tailwind CSS directives
+   Dependencies: tailwindcss */
+
+/* ── Google Fonts ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+/* ── Tailwind Directives ──────────────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Resets ──────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-body text-text bg-bg antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  /* Leaflet map z-index fix */
+  .leaflet-pane,
+  .leaflet-tile,
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow,
+  .leaflet-tile-container,
+  .leaflet-map-pane svg,
+  .leaflet-map-pane canvas,
+  .leaflet-zoom-box,
+  .leaflet-image-layer,
+  .leaflet-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  .leaflet-container {
+    overflow: hidden;
+  }
+}
+
+/* ── Utility Classes ──────────────────────────────────────────────────────── */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #b2ddd8 #e6f5f3;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-teal-light;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-teal-mid rounded-full;
+  }
+}
