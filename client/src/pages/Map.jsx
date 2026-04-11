@@ -1,9 +1,4 @@
 // File: src/pages/Map.jsx
-// Purpose: Live interactive map page with real-time incident markers, shelter markers,
-//          sidebar, and filters
-// Dependencies: react, react-leaflet, leaflet, ../hooks/useIncidents, ../hooks/useAuth,
-//               ../firebase/shelters, ../firebase/teams, ../components/IncidentCard,
-//               ../components/StatusBadge
 
 import { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
@@ -37,7 +32,7 @@ const TYPE_TO_FILTER = {
   other:     'All',
 };
 
-/* ── FlyTo helper — moves map programmatically ───────────────────────────── */
+/* ── FlyTo helper ────────────────────────────────────────────────────────── */
 function FlyToController({ target }) {
   const map = useMap();
   useEffect(() => {
@@ -57,12 +52,7 @@ function IncidentMarker({ incident, onClick }) {
     <CircleMarker
       center={[incident.lat, incident.lng]}
       radius={radius}
-      pathOptions={{
-        color,
-        fillColor: color,
-        fillOpacity: 0.7,
-        weight: 2,
-      }}
+      pathOptions={{ color, fillColor: color, fillOpacity: 0.7, weight: 2 }}
       eventHandlers={{ click: () => onClick(incident) }}
     >
       <Popup>
@@ -93,12 +83,7 @@ function ShelterMarker({ shelter }) {
     <CircleMarker
       center={[shelter.lat, shelter.lng]}
       radius={10}
-      pathOptions={{
-        color:       '#1a7a4a',
-        fillColor:   '#1a7a4a',
-        fillOpacity: 0.8,
-        weight:      2,
-      }}
+      pathOptions={{ color: '#1a7a4a', fillColor: '#1a7a4a', fillOpacity: 0.8, weight: 2 }}
     >
       <Popup>
         <div className="font-body text-xs min-w-[200px]">
@@ -110,7 +95,6 @@ function ShelterMarker({ shelter }) {
             <p className="font-semibold text-text">{shelter.name}</p>
           </div>
 
-          {/* Address */}
           <p className="text-text-mid leading-snug mb-2">{shelter.address}</p>
 
           {/* Occupancy bar */}
@@ -131,7 +115,7 @@ function ShelterMarker({ shelter }) {
             </div>
           </div>
 
-          {/* Status */}
+          {/* Status + directions */}
           <div className="flex items-center justify-between">
             <span className={`font-mono text-xs px-2 py-0.5 rounded-full border ${
               shelter.is_open
@@ -140,8 +124,6 @@ function ShelterMarker({ shelter }) {
             }`}>
               {shelter.is_open ? 'Open' : 'Closed'}
             </span>
-
-            {/* Directions link */}
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${shelter.lat},${shelter.lng}`}
               target="_blank"
@@ -160,7 +142,7 @@ function ShelterMarker({ shelter }) {
   );
 }
 
-/* ── Sidebar Tabs ────────────────────────────────────────────────────────── */
+/* ── Sidebar Content ─────────────────────────────────────────────────────── */
 function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, onSelectIncident, teamsLoading }) {
   return (
     <div className="flex flex-col h-full">
@@ -195,7 +177,7 @@ function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, o
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
 
-        {/* ── Incidents tab ── */}
+        {/* ── Incidents ── */}
         {activeTab === 'Incidents' && (
           <>
             {incidents.length === 0 && (
@@ -217,7 +199,7 @@ function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, o
           </>
         )}
 
-        {/* ── Shelters tab ── */}
+        {/* ── Shelters ── */}
         {activeTab === 'Shelters' && (
           <>
             {shelters.length === 0 && (
@@ -234,18 +216,13 @@ function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, o
                 : 0;
               return (
                 <div key={shelter.id} className="bg-white border border-border rounded-radius p-3 shadow-sm">
-                  {/* Name + status */}
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <p className="font-body font-semibold text-xs text-text truncate">{shelter.name}</p>
                     <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-green-light text-green border border-green/20 flex-shrink-0">
                       Open
                     </span>
                   </div>
-
-                  {/* Address */}
                   <p className="font-mono text-xs text-text-dim truncate mb-2">{shelter.address}</p>
-
-                  {/* Occupancy bar */}
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="font-mono text-xs text-text-dim">Occupancy</span>
@@ -253,15 +230,11 @@ function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, o
                     </div>
                     <div className="h-1.5 bg-border rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${
-                          pct >= 90 ? 'bg-red' : pct >= 70 ? 'bg-amber' : 'bg-green'
-                        }`}
+                        className={`h-full rounded-full ${pct >= 90 ? 'bg-red' : pct >= 70 ? 'bg-amber' : 'bg-green'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
                   </div>
-
-                  {/* Directions */}
                   {shelter.lat && shelter.lng && (
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${shelter.lat},${shelter.lng}`}
@@ -281,7 +254,7 @@ function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, o
           </>
         )}
 
-        {/* ── Teams tab ── */}
+        {/* ── Teams ── */}
         {activeTab === 'Teams' && (
           <>
             {teamsLoading && (
@@ -321,7 +294,7 @@ function SidebarContent({ incidents, shelters, teams, activeTab, setActiveTab, o
 /* ── Map Legend ──────────────────────────────────────────────────────────── */
 function MapLegend() {
   return (
-    <div className="absolute bottom-8 left-4 z-20 bg-white/95 border border-border rounded-radius shadow-md px-3 py-2.5 space-y-1.5">
+    <div className="absolute bottom-8 left-4 z-[400] bg-white/95 border border-border rounded-radius shadow-md px-3 py-2.5 space-y-1.5">
       <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-1">Legend</p>
       {[
         { color: '#c0392b', label: 'Critical Incident' },
@@ -354,7 +327,6 @@ export default function MapPage() {
   const [flyTarget, setFlyTarget]          = useState(null);
   const [sidebarOpen, setSidebarOpen]      = useState(true);
 
-  // Subscribe to teams
   useEffect(() => {
     const unsub = subscribeToTeams(
       (data) => { setTeams(data); setTeamsLoading(false); },
@@ -363,16 +335,17 @@ export default function MapPage() {
     return unsub;
   }, []);
 
-  // Subscribe to open shelters only
   useEffect(() => {
     const unsub = subscribeToShelters(
-      (data) => setShelters(data.filter((s) => s.is_open)),
-      (err)  => console.error(err),
+      // ── FIX: filter to open shelters with valid non-zero coordinates ──
+      (data) => setShelters(
+        data.filter((s) => s.is_open && s.lat && s.lng)
+      ),
+      (err) => console.error(err),
     );
     return unsub;
   }, []);
 
-  // Fly to incident if navigated from home page
   useEffect(() => {
     if (!location.state?.incidentId || incidents.length === 0) return;
     const target = incidents.find((i) => i.id === location.state.incidentId);
@@ -383,11 +356,10 @@ export default function MapPage() {
 
   const filteredIncidents = incidents.filter((inc) => {
     if (activeFilter === 'All') return true;
-    if (activeFilter === 'Shelters') return false; // shelters shown via separate layer
+    if (activeFilter === 'Shelters') return false;
     return TYPE_TO_FILTER[inc.type] === activeFilter;
   });
 
-  // When filter is Shelters, switch sidebar tab automatically
   useEffect(() => {
     if (activeFilter === 'Shelters') setActiveTab('Shelters');
     if (activeFilter === 'Teams')    setActiveTab('Teams');
@@ -400,13 +372,27 @@ export default function MapPage() {
     }
   }, []);
 
-  // Decide which shelters to show on map based on filter
   const showSheltersOnMap = activeFilter === 'All' || activeFilter === 'Shelters';
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    /*
+     * FIX: map z-index overlap with navbar.
+     *
+     * The Leaflet map injects its own z-index values (z-index: 400+) directly
+     * onto map pane elements, which caused them to bleed above the navbar's
+     * z-40 (z-index: 40) stacking context while scrolling on mobile.
+     *
+     * Solution: wrap the entire map page in `isolate` which creates a new
+     * stacking context, containing all Leaflet z-index values within it and
+     * preventing them from competing with the navbar.
+     *
+     * The navbar stays at z-40 in the parent stacking context (above this
+     * isolated container), so it always renders on top.
+     */
+    <div className="flex flex-col isolate" style={{ height: 'calc(100dvh - 56px)' }}>
+
       {/* Filter bar */}
-      <div className="bg-white border-b border-border px-4 py-2 flex items-center gap-2 flex-wrap z-10 flex-shrink-0">
+      <div className="bg-white border-b border-border px-4 py-2 flex items-center gap-2 flex-wrap flex-shrink-0">
         <span className="font-mono text-xs text-text-dim mr-1">Filter:</span>
         {FILTER_OPTIONS.map((f) => (
           <button
@@ -442,10 +428,11 @@ export default function MapPage() {
 
       {/* Map + sidebar */}
       <div className="flex flex-1 overflow-hidden relative">
+
         {/* Map */}
         <div className="flex-1 relative">
           {incLoading && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/80 pointer-events-none">
+            <div className="absolute inset-0 z-[500] flex items-center justify-center bg-bg/80 pointer-events-none">
               <div className="flex flex-col items-center gap-2">
                 <div className="w-8 h-8 border-2 border-teal border-t-transparent rounded-full animate-spin" />
                 <p className="font-mono text-xs text-text-dim">Loading map data…</p>
@@ -454,11 +441,9 @@ export default function MapPage() {
           )}
 
           {!incLoading && filteredIncidents.length === 0 && activeFilter !== 'Shelters' && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[400] pointer-events-none">
               <div className="bg-white/95 border border-border rounded-radius px-4 py-2 shadow-md text-center">
-                <p className="font-body text-sm text-text-mid">
-                  No active incidents on map
-                </p>
+                <p className="font-body text-sm text-text-mid">No active incidents on map</p>
                 <p className="font-mono text-xs text-text-dim mt-0.5">
                   Reports appear after admin verification
                 </p>
@@ -480,7 +465,8 @@ export default function MapPage() {
             />
 
             {/* Incident markers */}
-            {filteredIncidents.map((incident) => (
+            {filteredIncidents.map((incident) =>
+              // Guard: skip incidents with no real coordinates
               incident.lat && incident.lng ? (
                 <IncidentMarker
                   key={incident.id}
@@ -488,20 +474,23 @@ export default function MapPage() {
                   onClick={handleSelectIncident}
                 />
               ) : null
-            ))}
+            )}
 
-            {/* Shelter markers — shown on All and Shelters filter */}
+            {/* Shelter markers
+              * FIX: shelters array is already filtered to is_open && lat && lng
+              * in the subscription above, so no extra guard needed here.
+              * The old `shelter.lat != null` check passed on lat=0 since 0 != null
+              * is true — meaning shelters with missing coordinates rendered at
+              * 0,0 (off the West African coast) and were invisible in Nairobi view.
+              * Now we filter at source: s.lat && s.lng treats 0 as falsy correctly.
+            */}
             {showSheltersOnMap && shelters.map((shelter) => (
-              shelter.lat != null && shelter.lng != null ? (
-                <ShelterMarker key={shelter.id} shelter={shelter} />
-              ) : null
+              <ShelterMarker key={shelter.id} shelter={shelter} />
             ))}
 
-            {/* Fly-to controller */}
             <FlyToController target={flyTarget} />
           </MapContainer>
 
-          {/* Map Legend */}
           <MapLegend />
         </div>
 
