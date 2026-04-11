@@ -22,6 +22,14 @@ function LogoMark() {
   );
 }
 
+function IconHeart({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
 function NavItem({ to, label, onClick }) {
   return (
     <NavLink
@@ -40,7 +48,7 @@ function NavItem({ to, label, onClick }) {
   );
 }
 
-export default function Navbar() {
+export default function Navbar({ onDonate }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -62,6 +70,17 @@ export default function Navbar() {
           {NAV_LINKS.map((l) => (
             <NavItem key={l.to} {...l} />
           ))}
+
+          {/* Donate button — outlined/ghost style to differentiate from Report Now */}
+          <button
+            type="button"
+            onClick={onDonate}
+            className="inline-flex items-center gap-1.5 font-body font-semibold text-sm text-red border border-red/30 bg-red-light px-3.5 py-1.5 rounded-radius hover:bg-red hover:text-white hover:border-red transition-all duration-150"
+          >
+            <IconHeart size={13} />
+            Donate
+          </button>
+
           <Link
             to="/report"
             className="font-body font-semibold text-sm bg-teal text-white px-4 py-1.5 rounded-radius hover:bg-teal-dark transition-colors duration-150"
@@ -100,6 +119,17 @@ export default function Navbar() {
           {NAV_LINKS.map((l) => (
             <NavItem key={l.to} {...l} onClick={() => setMenuOpen(false)} />
           ))}
+
+          {/* Donate — mobile */}
+          <button
+            type="button"
+            onClick={() => { setMenuOpen(false); onDonate?.(); }}
+            className="inline-flex items-center justify-center gap-1.5 font-body font-semibold text-sm text-red border border-red/30 bg-red-light px-4 py-2 rounded-radius hover:bg-red hover:text-white hover:border-red transition-all duration-150"
+          >
+            <IconHeart size={13} />
+            Donate
+          </button>
+
           <Link
             to="/report"
             onClick={() => setMenuOpen(false)}
