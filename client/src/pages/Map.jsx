@@ -11,6 +11,8 @@ import { useAuth } from '../hooks/useAuth';
 import { subscribeToTeams } from '../firebase/teams';
 import IncidentCard from '../components/IncidentCard';
 import StatusBadge from '../components/StatusBadge';
+import { useLocation } from 'react-router-dom';
+
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 const NAIROBI_CENTER = [-1.2921, 36.8219];
@@ -167,6 +169,7 @@ function SidebarContent({ incidents, teams, activeTab, setActiveTab, onSelectInc
 
 /* ── Main Map Page ───────────────────────────────────────────────────────── */
 export default function MapPage() {
+  const location = useLocation();
   const { incidents, loading: incLoading } = useOpenIncidents();
   const { user }                           = useAuth();
   const [teams, setTeams]                  = useState([]);
@@ -175,6 +178,14 @@ export default function MapPage() {
   const [activeTab, setActiveTab]          = useState('Incidents');
   const [flyTarget, setFlyTarget]          = useState(null);
   const [sidebarOpen, setSidebarOpen]      = useState(true);
+
+  useEffect(() => {
+    if (!location.state?.incidentId || incidents.length === 0) return;
+    const target = incidents.find((i) => i.id === location.state.incidentId);
+    if (target?.lat && target?.lng) {
+      setFlyTarget({ lat: target.lat, lng: target.lng });
+    }
+  }, [location.state?.incidentId, incidents]);
 
   useEffect(() => {
     const unsub = subscribeToTeams(

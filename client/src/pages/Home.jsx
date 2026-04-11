@@ -6,9 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useOpenIncidents, useIncidentCounts } from '../hooks/useIncidents';
-import { useZones, useZonesAtRiskCount } from '../hooks/useZones';
 import { subscribeToOpenSheltersCount } from '../firebase/shelters';
-import ZoneCard from '../components/ZoneCard';
 
 /* ── Live Stats Bar ──────────────────────────────────────────────────────── */
 function StatItem({ value, label, loading }) {
@@ -30,7 +28,6 @@ function StatItem({ value, label, loading }) {
 
 function LiveStatsBar() {
   const { openCount, pendingCount, loading: incLoading } = useIncidentCounts();
-  const { count: zonesAtRisk, loading: zonesLoading }    = useZonesAtRiskCount();
   const [openShelters, setOpenShelters]                   = useState(0);
   const [sheltersLoading, setSheltersLoading]             = useState(true);
 
@@ -48,7 +45,6 @@ function LiveStatsBar() {
         <div className="flex flex-wrap justify-center divide-x divide-white/20">
           <StatItem value={openCount}    label="Active Incidents" loading={incLoading} />
           <StatItem value={openShelters} label="Open Shelters"    loading={sheltersLoading} />
-          <StatItem value={zonesAtRisk}  label="Zones at Risk"    loading={zonesLoading} />
           <StatItem value={pendingCount} label="Awaiting Review"  loading={incLoading} />
         </div>
       </div>
@@ -137,65 +133,99 @@ function Hero() {
   );
 }
 
-/* ── Zone Risk Grid ──────────────────────────────────────────────────────── */
-function ZonesSection() {
-  const { zones, loading, error } = useZones();
+/* ── Latest Incident Section ──────────────────────────────────────────────────────── */
+function LatestIncidentsSection() {
+  const { incidents, loading } = useOpenIncidents();
+  const latest = incidents.slice(0, 5);
+
+  function timeAgo(timestamp) {
+    if (!timestamp?.toDate) return '—';
+    const diff = Math.floor((Date.now() - timestamp.toDate().getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  const TYPE_LABELS = {
+    flood: 'Flood', landslide: 'Landslide', blocked: 'Road Blocked',
+    rescue: 'Rescue Needed', shelter: 'Shelter Request', other: 'Other',
+  };
+
+  const SEVERITY_COLORS = {
+    critical: 'bg-red-light text-red border-red/20',
+    warning:  'bg-amber-light text-amber border-amber/20',
+    info:     'bg-teal-light text-teal border-teal/20',
+  };
 
   return (
-    <section className="py-12 px-4 sm:px-6 max-w-6xl mx-auto w-full" aria-labelledby="zones-heading">
+    <section className="py-12 px-4 sm:px-6 max-w-6xl mx-auto w-full" aria-labelledby="incidents-heading">
       <div className="flex items-baseline justify-between mb-6">
         <div>
-          <h2 id="zones-heading" className="font-display text-display-md text-text">
-            Zone Risk Levels
+          <h2 id="incidents-heading" className="font-display text-display-md text-text">
+            Latest Incidents
           </h2>
           <p className="font-body text-sm text-text-mid mt-1">
-            Real-time flood risk assessment by neighbourhood
+            5 most recent verified reports
           </p>
         </div>
-        <Link
-          to="/map"
+        <a
+          href="/map"
           className="font-body text-sm text-teal hover:text-teal-dark font-medium transition-colors duration-150"
         >
-          View on map →
-        </Link>
+          View all on map →
+        </a>
       </div>
 
       {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="bg-white border border-border rounded-radius p-4 animate-pulse">
-              <div className="flex items-center justify-between mb-2">
-                <div className="h-4 w-32 bg-border rounded" />
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-40 bg-border rounded" />
                 <div className="h-5 w-16 bg-border rounded-full" />
               </div>
-              <div className="h-3 w-20 bg-border rounded mt-2" />
+              <div className="h-3 w-24 bg-border rounded mt-2" />
             </div>
           ))}
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-light border border-red/20 rounded-radius p-4 text-sm font-body text-red">
-          Unable to load zone data. Please refresh.
-        </div>
-      )}
-
-      {!loading && !error && zones.length === 0 && (
+      {!loading && latest.length === 0 && (
         <div className="text-center py-12 bg-white border border-border rounded-radius-lg">
           <svg className="w-10 h-10 text-border-dark mx-auto mb-3" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
           </svg>
-          <p className="font-display text-lg text-text-mid mb-1">No zones configured</p>
-          <p className="font-body text-sm text-text-dim">
-            An administrator needs to seed zone data. See README for instructions.
-          </p>
+          <p className="font-display text-lg text-text-mid mb-1">No active incidents</p>
+          <p className="font-body text-sm text-text-dim mb-4">Stay alert. If you see flooding, report it.</p>
+          <a
+            href="/report"
+            className="inline-block font-body font-semibold text-sm text-teal hover:text-teal-dark transition-colors duration-150"
+          >
+            Report an incident →
+          </a>
         </div>
       )}
 
-      {!loading && !error && zones.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {zones.map((zone) => (
-            <ZoneCard key={zone.id} zone={zone} />
+      {!loading && latest.length > 0 && (
+        <div className="space-y-3">
+          {latest.map((incident) => (
+            <Link to="/map" state={{ incidentId: incident.id }} key={incident.id} className="block bg-white border border-border rounded-radius p-4 shadow-sm hover:shadow-md hover:border-teal transition-all duration-150">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-body font-semibold text-sm text-text truncate">
+                    {TYPE_LABELS[incident.type] ?? incident.type}
+                    <span className="text-text-dim font-normal"> — {incident.zone_name}</span>
+                  </p>
+                  <p className="font-mono text-xs text-text-dim mt-0.5">
+                    {timeAgo(incident.created_at)}
+                  </p>
+                </div>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-xs font-medium border flex-shrink-0 ${SEVERITY_COLORS[incident.severity] ?? ''}`}>
+                  {incident.severity}
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
       )}
@@ -259,7 +289,7 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <ZonesSection />
+      <LatestIncidentsSection />
       <UssdSection />
     </>
   );
