@@ -37,7 +37,7 @@ service cloud.firestore {
 
       (data.reporter_phone == null || data.reporter_phone is string) &&
       (data.verified_by == null) &&
-      (data.verified_at == null);
+      (data.verified_at == null)
       (data.location_display == null || data.location_display is string) &&
       (data.location_source == null || data.location_source is string);
     }
@@ -137,6 +137,32 @@ service cloud.firestore {
       allow create: if isAuth() && validTeam();
       allow update: if isAuth();
       allow delete: if isAuth();
+    }
+
+    // ── Donations ────────────────────────────────────────────────────────────
+    // Validate donation fields on create (public — no auth required).
+    // Only admins can read the full donations list.
+    function validDonation() {
+      let data = request.resource.data;
+      return
+        data.donorEmail is string && data.donorEmail.size() > 0 &&
+        data.amount is number && data.amount > 0 &&
+        data.currency is string && data.currency.size() == 3 &&
+        data.frequency is string && data.frequency in ['once', 'monthly'] &&
+        data.status is string && data.status in ['completed', 'pending', 'failed'] &&
+        data.reference is string && data.reference.size() > 0 &&
+        data.createdAt == request.time;
+    }
+    
+    match /donations/{donationId} {
+      // Public create: any donor can write after Paystack confirmation
+      allow create: if validDonation();
+    
+      // Only authenticated admins can read donation records
+      allow read: if isAuth();
+    
+      // No public updates or deletes
+      allow update, delete: if isAuth();
     }
 
     // ── Default: deny all other collections ──────────────────────────────────

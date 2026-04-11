@@ -1,6 +1,10 @@
+// File: src/components/Footer.jsx
+// Change: Removed local useState and DonationModal render.
+//         Now receives onDonate prop from PublicLayout.
+
 import { Link } from 'react-router-dom';
 
-export default function Footer() {
+export default function Footer({ onDonate }) {
   const year = new Date().getFullYear();
 
   return (
@@ -13,6 +17,16 @@ export default function Footer() {
             <p className="font-body text-xs text-text-dim leading-relaxed">
               Real-time flood crisis response coordination for Nairobi, Kenya.
             </p>
+            <button
+              type="button"
+              onClick={onDonate}
+              className="mt-3 inline-flex items-center gap-1.5 font-body font-semibold text-xs bg-teal text-white px-3 py-1.5 rounded-radius hover:bg-teal-dark transition-colors duration-150"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              Support this project
+            </button>
           </div>
 
           {/* Quick links */}
@@ -63,14 +77,22 @@ export default function Footer() {
           <p className="font-mono text-xs text-text-dim">
             © {year} NairobiAlert. For emergency use.
           </p>
-          {/* Admin link — intentionally small and unobtrusive */}
-          <Link
-            to="/admin/login"
-            className="font-mono text-xs text-text-dim hover:text-teal transition-colors duration-150"
-            aria-label="Admin login"
-          >
-            Admin
-          </Link>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onDonate}
+              className="font-mono text-xs text-teal hover:text-teal-dark transition-colors duration-150"
+            >
+              Donate
+            </button>
+            <Link
+              to="/admin/login"
+              className="font-mono text-xs text-text-dim hover:text-teal transition-colors duration-150"
+              aria-label="Admin login"
+            >
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

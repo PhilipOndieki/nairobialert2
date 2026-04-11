@@ -1,15 +1,3 @@
-// File: src/components/AIChatbot.jsx
-// Purpose: Floating AI chatbot for NairobiAlert — powered by Gemini, styled to match
-//          the teal/mono design system. Handles flood queries, safety info, shelter
-//          lookups, and incident reporting guidance.
-// Dependencies: react, lucide-react (already in project via EveShield pattern),
-//               @google/generative-ai (add to package.json)
-//
-// Setup:
-//   1. npm install @google/generative-ai
-//   2. Add VITE_GEMINI_API_KEY to your .env
-//   3. Import and drop <AIChatbot /> anywhere in PublicLayout.jsx
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /* ── Icons (inline SVG — no extra dep, matches project pattern) ────────────── */

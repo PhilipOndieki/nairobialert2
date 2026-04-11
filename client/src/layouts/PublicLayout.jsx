@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AIChatbot from '../components/AIChatbot'; 
-
+import DonationModal from '../components/DonationModal'
 /**
  * PublicLayout — used by Home, Map, Report, About.
  * The <Outlet /> renders the current matched child route.
@@ -16,6 +16,8 @@ export default function PublicLayout() {
       </main>
       <Footer />
       <AIChatbot />
+      <DonationModal />
+
     </div>
   );
 }
