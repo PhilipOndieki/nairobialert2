@@ -492,7 +492,7 @@ export default function MapPage() {
 
             {/* Shelter markers — shown on All and Shelters filter */}
             {showSheltersOnMap && shelters.map((shelter) => (
-              shelter.lat && shelter.lng ? (
+              shelter.lat != null && shelter.lng != null ? (
                 <ShelterMarker key={shelter.id} shelter={shelter} />
               ) : null
             ))}

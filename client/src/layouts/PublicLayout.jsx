@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import AIChatbot from '../components/AIChatbot'; 
 
 /**
  * PublicLayout — used by Home, Map, Report, About.
@@ -14,6 +15,7 @@ export default function PublicLayout() {
         <Outlet />
       </main>
       <Footer />
+      <AIChatbot />
     </div>
   );
 }
