@@ -1,7 +1,3 @@
-// File: src/pages/admin/Shelters.jsx
-// Purpose: Admin shelters management — CRUD interface for evacuation shelter records
-// Dependencies: react, ../../firebase/shelters, ../../components/StatusBadge
-
 import { useState, useEffect } from 'react';
 import { subscribeToShelters, createShelter, updateShelter, deleteShelter } from '../../firebase/shelters';
 
@@ -148,7 +144,7 @@ function ShelterForm({ initial, onSave, onCancel, saving }) {
   );
 }
 
-/* ── Page ────────────────────────────────────────────────────────────────── */
+/* Page */
 export default function AdminShelters() {
   const [shelters, setShelters] = useState([]);
   const [loading, setLoading]   = useState(true);

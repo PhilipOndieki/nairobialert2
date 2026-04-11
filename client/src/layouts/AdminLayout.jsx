@@ -1,7 +1,3 @@
-// File: src/layouts/AdminLayout.jsx
-// Purpose: Sidebar layout for all authenticated admin pages with navigation and logout
-// Dependencies: react, react-router-dom, ../hooks/useAuth
-
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';

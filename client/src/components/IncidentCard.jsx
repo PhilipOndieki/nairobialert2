@@ -1,7 +1,3 @@
-// File: src/components/IncidentCard.jsx
-// Purpose: Card component for displaying a single incident with severity, zone, and description
-// Dependencies: react, ./StatusBadge
-
 import StatusBadge from './StatusBadge';
 
 const TYPE_LABELS = {

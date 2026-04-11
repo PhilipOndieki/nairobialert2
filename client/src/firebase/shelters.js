@@ -1,7 +1,3 @@
-// File: src/firebase/shelters.js
-// Purpose: Firestore helpers for the shelters collection (evacuation shelters)
-// Dependencies: firebase/firestore, ./config
-
 import {
   collection,
   doc,

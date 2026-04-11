@@ -1,7 +1,3 @@
-// File: src/firebase/teams.js
-// Purpose: Firestore helpers for the teams collection (response teams)
-// Dependencies: firebase/firestore, ./config
-
 import {
   collection,
   doc,

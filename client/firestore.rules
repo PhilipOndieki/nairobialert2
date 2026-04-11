@@ -1,8 +1,3 @@
-// File: firestore.rules
-// Purpose: Firestore security rules — public read for open incidents, authenticated writes,
-//          public create for report form with field validation
-// Version: 2023+
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -93,7 +88,7 @@ service cloud.firestore {
         data.is_open is bool;
     }
 
-    // ── Incidents ─────────────────────────────────────────────────────────────
+    // Incidents ─────────────────────────────────────────────────────────────
     match /incidents/{incidentId} {
       // Public read: only approved (open) incidents are readable without auth.
       // Authenticated admins can read all incidents.
@@ -111,7 +106,7 @@ service cloud.firestore {
       allow delete: if isAuth();
     }
 
-    // ── Zones ─────────────────────────────────────────────────────────────────
+    // Zones ─────────────────────────────────────────────────────────────────
     match /zones/{zoneId} {
       // Public read: anyone can view zone risk levels
       allow read: if true;
@@ -122,7 +117,7 @@ service cloud.firestore {
       allow delete: if isAuth();
     }
 
-    // ── Shelters ──────────────────────────────────────────────────────────────
+    //Shelters ──────────────────────────────────────────────────────────────
     match /shelters/{shelterId} {
       // Public read: anyone can view shelter info
       allow read: if true;
@@ -133,7 +128,7 @@ service cloud.firestore {
       allow delete: if isAuth();
     }
 
-    // ── Teams ─────────────────────────────────────────────────────────────────
+    // Teams ─────────────────────────────────────────────────────────────────
     match /teams/{teamId} {
       // Public read: team info visible on public map
       allow read: if true;

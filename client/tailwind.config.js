@@ -1,7 +1,3 @@
-// File: tailwind.config.js
-// Purpose: Tailwind CSS v3 config with NairobiAlert design system tokens
-// Dependencies: tailwindcss
-
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [

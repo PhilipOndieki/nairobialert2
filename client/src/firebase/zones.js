@@ -1,7 +1,3 @@
-// File: src/firebase/zones.js
-// Purpose: Firestore helpers for the zones collection (risk level areas)
-// Dependencies: firebase/firestore, ./config
-
 import {
   collection,
   doc,

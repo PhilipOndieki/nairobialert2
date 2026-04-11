@@ -1,7 +1,3 @@
-// File: src/pages/admin/Teams.jsx
-// Purpose: Admin teams management — CRUD interface for response team records
-// Dependencies: react, ../../firebase/teams, ../../components/StatusBadge
-
 import { useState, useEffect } from 'react';
 import { subscribeToTeams, createTeam, updateTeam, deleteTeam } from '../../firebase/teams';
 import StatusBadge from '../../components/StatusBadge';
@@ -107,7 +103,7 @@ function TeamForm({ initial, onSave, onCancel, saving }) {
   );
 }
 
-/* ── Page ────────────────────────────────────────────────────────────────── */
+/* Page */
 export default function AdminTeams() {
   const [teams, setTeams]     = useState([]);
   const [loading, setLoading] = useState(true);

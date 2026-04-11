@@ -1,7 +1,3 @@
-// File: src/components/ProtectedRoute.jsx
-// Purpose: Route guard — redirects unauthenticated users to /admin/login
-// Dependencies: react, react-router-dom, ../hooks/useAuth
-
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 

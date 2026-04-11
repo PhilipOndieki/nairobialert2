@@ -1,9 +1,3 @@
-// File: src/pages/admin/Dashboard.jsx
-// Purpose: Admin dashboard — live stat cards and pending incidents queue with verify/reject actions
-// Dependencies: react, ../../hooks/useIncidents, ../../hooks/useAuth,
-//               ../../firebase/incidents, ../../firebase/shelters, ../../firebase/teams,
-//               ../../components/StatusBadge
-
 import { useState, useEffect } from 'react';
 import { useAllIncidents, useIncidentCounts } from '../../hooks/useIncidents';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,7 +6,7 @@ import { subscribeToOpenSheltersCount } from '../../firebase/shelters';
 import { subscribeToDeployedCount } from '../../firebase/teams';
 import StatusBadge from '../../components/StatusBadge';
 
-/* ── Stat Card ───────────────────────────────────────────────────────────── */
+/* Stat Card */
 function StatCard({ label, value, loading, accent }) {
   const accentMap = {
     amber: 'border-l-amber',

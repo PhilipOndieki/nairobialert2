@@ -1,16 +1,9 @@
-// File: src/pages/Report.jsx
-// Purpose: Public incident report form with three-tier location resolution.
-//          Tier 1: Browser GPS + Nominatim reverse geocode (primary).
-//          Zone dropdown: auto-matched via Haversine or manual fallback.
-//          Offline-safe: Firestore persistence in config.js queues submissions.
-// Dependencies: react, react-leaflet, leaflet, ../firebase/incidents, ../hooks/useZones
-
 import { useState, useEffect, useCallback, useId } from 'react';
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
 import { createIncident } from '../firebase/incidents';
 import { useZones } from '../hooks/useZones';
 
-/* ── Constants ───────────────────────────────────────────────────────────── */
+/* Constants ───────────────────────────────────────────────────────────── */
 const INCIDENT_TYPES = [
   { value: 'flood',     label: 'Flooding / Water Overflow' },
   { value: 'landslide', label: 'Landslide / Mudslide' },
@@ -538,8 +531,8 @@ export default function ReportPage() {
 
   function validate() {
     const e = {};
-    if (!form.type)
-      e.type = 'Please select an incident type.';
+    if (!form.type || form.type.trim().length < 3)
+    e.type = 'Please select or describe an incident type.';
     if (!form.severity)
       e.severity = 'Please select a severity level.';
     // Location: either GPS resolved OR zone manually selected
@@ -652,22 +645,43 @@ export default function ReportPage() {
           <Label htmlFor={`${formId}-type`} required>Incident Type</Label>
           <select
             id={`${formId}-type`}
-            value={form.type}
-            onChange={(e) => setField('type', e.target.value)}
+            value={INCIDENT_TYPES.some((t) => t.value === form.type) ? form.type : form.type ? 'custom' : ''}
+            onChange={(e) => {
+              if (e.target.value === 'custom') {
+                setField('type', '');
+              } else {
+                setField('type', e.target.value);
+              }
+            }}
             className={`w-full font-body text-sm bg-bg border rounded-radius px-3 py-2.5 text-text focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors duration-150 ${
               errors.type ? 'border-red' : 'border-border hover:border-border-dark'
             }`}
-            aria-describedby={errors.type ? `${formId}-type-error` : undefined}
             aria-invalid={!!errors.type}
           >
             <option value="">Select incident type…</option>
             {INCIDENT_TYPES.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
+            <option value="custom">Other — type your own</option>
           </select>
-          <FieldError message={errors.type} />
-        </div>
 
+          {/* Custom type input — shown when "Other — type your own" is selected */}
+          {(!INCIDENT_TYPES.some((t) => t.value === form.type) && form.type !== '') || 
+          (!INCIDENT_TYPES.some((t) => t.value === form.type) && 
+            document.getElementById(`${formId}-type`)?.value === 'custom') ? (
+            <input
+              type="text"
+              placeholder="Describe the incident type…"
+              value={form.type}
+              onChange={(e) => setField('type', e.target.value)}
+              className={`mt-2 w-full font-body text-sm bg-bg border rounded-radius px-3 py-2.5 text-text placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors duration-150 ${
+                errors.type ? 'border-red' : 'border-border hover:border-border-dark'
+              }`}
+            />
+          ) : null}
+
+          <FieldError message={errors.type} />
+        </div>     
         {/* ── Severity ──────────────────────────────────────────────────── */}
         <SeveritySelector
           value={form.severity}

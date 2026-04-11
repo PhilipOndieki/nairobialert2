@@ -1,7 +1,3 @@
-// File: src/layouts/PublicLayout.jsx
-// Purpose: Wrapper layout for all public-facing pages — renders Navbar + Footer
-// Dependencies: react, react-router-dom, ../components/Navbar, ../components/Footer
-
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';

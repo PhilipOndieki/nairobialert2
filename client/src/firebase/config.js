@@ -1,7 +1,3 @@
-// File: src/firebase/config.js
-// Purpose: Initialize Firebase app with environment variable config and IndexedDB offline persistence
-// Dependencies: firebase/app, firebase/auth, firebase/firestore
-
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';

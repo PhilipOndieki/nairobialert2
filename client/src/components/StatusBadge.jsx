@@ -1,7 +1,3 @@
-// File: src/components/StatusBadge.jsx
-// Purpose: Reusable pill badge for incident status and severity — design-system-compliant
-// Dependencies: react
-
 /**
  * Color maps for each variant type.
  * All classes must be full strings (no dynamic interpolation) for Tailwind purging.

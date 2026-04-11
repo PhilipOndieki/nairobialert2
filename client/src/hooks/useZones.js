@@ -1,7 +1,3 @@
-// File: src/hooks/useZones.js
-// Purpose: Real-time Firestore listener hook for zones collection
-// Dependencies: react, ../firebase/zones
-
 import { useEffect, useState } from 'react';
 import { subscribeToZones } from '../firebase/zones';
 

@@ -1,7 +1,3 @@
-// File: src/components/Footer.jsx
-// Purpose: Public site footer with admin login link, USSD info, and attribution
-// Dependencies: react, react-router-dom
-
 import { Link } from 'react-router-dom';
 
 export default function Footer() {

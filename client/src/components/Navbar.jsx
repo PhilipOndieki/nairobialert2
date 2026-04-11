@@ -1,7 +1,3 @@
-// File: src/components/Navbar.jsx
-// Purpose: Responsive public navigation with mobile menu — no auth state dependency
-// Dependencies: react, react-router-dom
-
 import { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 

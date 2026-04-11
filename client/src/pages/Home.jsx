@@ -1,8 +1,3 @@
-// File: src/pages/Home.jsx
-// Purpose: Public home page with hero, live stats bar, zone risk cards, and USSD info
-// Dependencies: react, react-router-dom, ../hooks/useIncidents, ../hooks/useZones,
-//               ../firebase/shelters, ../components/ZoneCard
-
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useOpenIncidents, useIncidentCounts } from '../hooks/useIncidents';
@@ -284,7 +279,7 @@ function UssdSection() {
   );
 }
 
-/* ── Page ────────────────────────────────────────────────────────────────── */
+/* Page */
 export default function Home() {
   return (
     <>

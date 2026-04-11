@@ -1,7 +1,3 @@
-// File: src/firebase/incidents.js
-// Purpose: Firestore CRUD operations for the incidents collection
-// Dependencies: firebase/firestore, ./config
-
 import {
   collection,
   doc,

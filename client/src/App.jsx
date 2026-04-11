@@ -1,7 +1,3 @@
-// File: src/App.jsx
-// Purpose: Root application component — React Router v6 createBrowserRouter with lazy pages
-// Dependencies: react, react-router-dom, ./hooks/useAuth, all page components, all layout components
-
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
@@ -49,7 +45,7 @@ function NotFound() {
   );
 }
 
-/* ── Router ──────────────────────────────────────────────────────────────── */
+/* Router ──────────────────────────────────────────────────────────────── */
 const router = createBrowserRouter([
   // ── Public routes
   {
@@ -148,7 +144,7 @@ const router = createBrowserRouter([
   },
 ]);
 
-/* ── App root ────────────────────────────────────────────────────────────── */
+/* App root ────────────────────────────────────────────────────────────── */
 export default function App() {
   return (
     <AuthProvider>

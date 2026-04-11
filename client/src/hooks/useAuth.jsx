@@ -1,7 +1,3 @@
-// File: src/hooks/useAuth.js
-// Purpose: Firebase Auth state hook — provides current user and loading state via context
-// Dependencies: react, firebase/auth, ../firebase/config
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';

@@ -1,8 +1,3 @@
-// File: src/pages/admin/Incidents.jsx
-// Purpose: Admin incidents management — filter tabs, full table, verify/reject/resolve actions
-// Dependencies: react, ../../hooks/useIncidents, ../../hooks/useAuth,
-//               ../../firebase/incidents, ../../components/StatusBadge
-
 import { useState } from 'react';
 import { useAllIncidents } from '../../hooks/useIncidents';
 import { useAuth } from '../../hooks/useAuth';
@@ -337,7 +332,7 @@ function IncidentsTable({ incidents, onVerify, onReject, onResolve, busy }) {
   );
 }
 
-/* ── Page ────────────────────────────────────────────────────────────────── */
+/* Page */
 export default function AdminIncidents() {
   const { incidents, loading } = useAllIncidents();
   const { user }              = useAuth();

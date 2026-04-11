@@ -1,7 +1,3 @@
-// File: src/components/ZoneCard.jsx
-// Purpose: Card component for displaying zone risk level — reads from Firestore zones collection
-// Dependencies: react, ./StatusBadge
-
 import StatusBadge from './StatusBadge';
 
 const RISK_ICONS = {

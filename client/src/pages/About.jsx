@@ -1,7 +1,3 @@
-// File: src/pages/About.jsx
-// Purpose: Static informational about page — system overview, how it works, technology
-// Dependencies: react, react-router-dom
-
 import { Link } from 'react-router-dom';
 
 function Section({ id, label, title, children }) {

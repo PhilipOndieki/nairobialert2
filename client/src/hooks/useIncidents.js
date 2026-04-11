@@ -1,7 +1,3 @@
-// File: src/hooks/useIncidents.js
-// Purpose: Real-time Firestore listener hook for incidents — handles loading, error, cleanup
-// Dependencies: react, ../firebase/incidents
-
 import { useEffect, useState } from 'react';
 import {
   subscribeToOpenIncidents,
