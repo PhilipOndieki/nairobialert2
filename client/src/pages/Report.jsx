@@ -1,8 +1,12 @@
 // File: src/pages/Report.jsx
-// Purpose: Public incident report form — writes to Firestore with status 'pending', no auth required
-// Dependencies: react, ../firebase/incidents, ../firebase/zones, ../hooks/useZones
+// Purpose: Public incident report form with three-tier location resolution.
+//          Tier 1: Browser GPS + Nominatim reverse geocode (primary).
+//          Zone dropdown: auto-matched via Haversine or manual fallback.
+//          Offline-safe: Firestore persistence in config.js queues submissions.
+// Dependencies: react, react-leaflet, leaflet, ../firebase/incidents, ../hooks/useZones
 
-import { useState, useId } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
+import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
 import { createIncident } from '../firebase/incidents';
 import { useZones } from '../hooks/useZones';
 
@@ -47,8 +51,65 @@ const INITIAL_FORM = {
   description:     '',
   reporter_phone:  '',
   people_affected: '',
-  _honeypot:       '', // never submitted to Firestore
+  _honeypot:       '',
 };
+
+// GPS options — high accuracy, 10s timeout, accept cached position up to 1min old
+const GEO_OPTIONS = {
+  enableHighAccuracy: true,
+  timeout:            10000,
+  maximumAge:         60000,
+};
+
+const NOMINATIM_HEADERS = {
+  'Accept-Language': 'en',
+  'User-Agent':      'NairobiAlert/1.0 (flood-response-system)',
+};
+
+/* ── Haversine Distance (km) ─────────────────────────────────────────────── */
+// Pure function — no deps, no packages. Standard haversine formula.
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R    = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ── Find Nearest Zone ───────────────────────────────────────────────────── */
+function findNearestZone(lat, lng, zones) {
+  if (!zones || zones.length === 0) return null;
+  let nearest  = null;
+  let minDist  = Infinity;
+  for (const zone of zones) {
+    if (!zone.lat || !zone.lng) continue;
+    const dist = haversineKm(lat, lng, zone.lat, zone.lng);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = zone;
+    }
+  }
+  if (!nearest) return null;
+  return {
+    zone:     nearest,
+    distanceKm: minDist,
+    label:    `Matched: ${nearest.name} (~${minDist < 1 ? `${Math.round(minDist * 1000)}m` : `${minDist.toFixed(1)}km`})`,
+  };
+}
+
+/* ── Nominatim Reverse Geocode ───────────────────────────────────────────── */
+async function reverseGeocode(lat, lng) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
+  const res = await fetch(url, { headers: NOMINATIM_HEADERS });
+  if (!res.ok) throw new Error(`Nominatim responded ${res.status}`);
+  const data = await res.json();
+  return data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
 
 /* ── Field components ────────────────────────────────────────────────────── */
 function Label({ htmlFor, children, required }) {
@@ -65,7 +126,7 @@ function FieldError({ message }) {
   return <p className="mt-1 font-body text-xs text-red">{message}</p>;
 }
 
-/* ── Severity selector ───────────────────────────────────────────────────── */
+/* ── Severity Selector ───────────────────────────────────────────────────── */
 function SeveritySelector({ value, onChange, error }) {
   return (
     <div>
@@ -96,6 +157,316 @@ function SeveritySelector({ value, onChange, error }) {
         ))}
       </div>
       <FieldError message={error} />
+    </div>
+  );
+}
+
+/* ── GPS Detect Button ───────────────────────────────────────────────────── */
+function DetectButton({ onClick, detecting }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={detecting}
+      className="w-full flex items-center justify-center gap-2.5 bg-teal text-white font-body font-semibold text-sm py-3 px-4 rounded-radius hover:bg-teal-dark focus:outline-none focus:ring-2 focus:ring-teal focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
+      aria-label="Detect my current location using GPS"
+    >
+      {detecting ? (
+        <>
+          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          Detecting location…
+        </>
+      ) : (
+        <>
+          {/* Location pin icon */}
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+          </svg>
+          Detect My Location
+        </>
+      )}
+    </button>
+  );
+}
+
+/* ── Location Preview Map ────────────────────────────────────────────────── */
+function LocationPreviewMap({ lat, lng }) {
+  // Leaflet CSS already imported globally in src/index.css — do not re-import.
+  return (
+    <MapContainer
+      center={[lat, lng]}
+      zoom={15}
+      style={{ height: '200px', width: '100%', borderRadius: '10px' }}
+      zoomControl={false}
+      dragging={false}
+      scrollWheelZoom={false}
+      doubleClickZoom={false}
+      touchZoom={false}
+      attributionControl={false}
+    >
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        subdomains="abcd"
+        maxZoom={20}
+      />
+      <CircleMarker
+        center={[lat, lng]}
+        radius={10}
+        pathOptions={{
+          color:       '#0a7e6e',
+          fillColor:   '#0a7e6e',
+          fillOpacity: 0.75,
+          weight:      2,
+        }}
+      />
+    </MapContainer>
+  );
+}
+
+/* ── Location Section ────────────────────────────────────────────────────── */
+// Encapsulates all three location tiers and their state.
+// Calls onResolved({ lat, lng, zone_name }) when location is confirmed.
+function LocationSection({ zones, zonesLoading, onResolved, error }) {
+  // gpsSupported: null = unknown, true/false after mount check
+  const [gpsSupported,  setGpsSupported]  = useState(null);
+  const [detecting,     setDetecting]     = useState(false);
+  const [gpsError,      setGpsError]      = useState(null);
+
+  // Resolved location state
+  const [resolved,      setResolved]      = useState(null);
+  // { lat, lng, displayName, matchLabel, usingFallback }
+
+  // Zone dropdown state — used both as auto-match display and manual override
+  const [selectedZone,  setSelectedZone]  = useState('');
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  // Check GPS support on mount — silent, no side effects
+  useEffect(() => {
+    setGpsSupported('geolocation' in navigator);
+  }, []);
+
+  // Propagate resolved location up to parent form on every change
+  useEffect(() => {
+    if (resolved) {
+      onResolved({
+        lat:       resolved.lat,
+        lng:       resolved.lng,
+        zone_name: selectedZone,
+      });
+    } else if (usingFallback && selectedZone) {
+      // Zone fallback: find the zone object to get its coordinates
+      const zone = zones.find((z) => z.name === selectedZone);
+      if (zone) {
+        onResolved({
+          lat:       zone.lat ?? 0,
+          lng:       zone.lng ?? 0,
+          zone_name: selectedZone,
+        });
+      }
+    } else {
+      onResolved(null);
+    }
+  }, [resolved, selectedZone, usingFallback, zones, onResolved]);
+
+  const handleDetect = useCallback(() => {
+    if (!navigator.geolocation) return;
+    setDetecting(true);
+    setGpsError(null);
+    setResolved(null);
+    setUsingFallback(false);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude: lat, longitude: lng } = position.coords;
+        try {
+          const displayName = await reverseGeocode(lat, lng);
+          const match       = findNearestZone(lat, lng, zones);
+          const matchedZone = match?.zone?.name ?? '';
+
+          setResolved({
+            lat,
+            lng,
+            displayName,
+            matchLabel:    match?.label ?? null,
+            usingFallback: false,
+          });
+          setSelectedZone(matchedZone);
+        } catch {
+          // Reverse geocode failed — still have valid coordinates, just no address text
+          const match = findNearestZone(lat, lng, zones);
+          setResolved({
+            lat,
+            lng,
+            displayName:   `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            matchLabel:    match?.label ?? null,
+            usingFallback: false,
+          });
+          setSelectedZone(match?.zone?.name ?? '');
+        } finally {
+          setDetecting(false);
+        }
+      },
+      (err) => {
+        setDetecting(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGpsError('Location access denied. Please select your zone manually below.');
+        } else if (err.code === err.TIMEOUT) {
+          setGpsError('Location detection timed out. Please select your zone manually below.');
+        } else {
+          setGpsError('Could not detect location. Select your zone below.');
+        }
+        setUsingFallback(true);
+      },
+      GEO_OPTIONS,
+    );
+  }, [zones]);
+
+  const handleReset = useCallback(() => {
+    setResolved(null);
+    setGpsError(null);
+    setSelectedZone('');
+    setUsingFallback(false);
+    setDetecting(false);
+  }, []);
+
+  const handleZoneChange = useCallback((zoneName) => {
+    setSelectedZone(zoneName);
+    if (!resolved) {
+      // Pure fallback path — mark as fallback so parent gets zone coordinates
+      setUsingFallback(true);
+    }
+  }, [resolved]);
+
+  // ── Resolved state — show map preview ──────────────────────────────────
+  if (resolved) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="font-body font-medium text-sm text-text">
+            Location <span className="text-red" aria-hidden="true">*</span>
+          </p>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="font-body text-xs text-teal hover:text-teal-dark font-medium transition-colors duration-150"
+          >
+            Change Location
+          </button>
+        </div>
+
+        {/* Map preview */}
+        <div className="overflow-hidden rounded-radius border border-border shadow-sm">
+          <LocationPreviewMap lat={resolved.lat} lng={resolved.lng} />
+        </div>
+
+        {/* Address + coordinates */}
+        <div className="bg-teal-light border border-teal/20 rounded-radius px-3 py-2.5 space-y-1">
+          <p className="font-body text-xs text-text leading-relaxed line-clamp-2">
+            {resolved.displayName}
+          </p>
+          <p className="font-mono text-xs text-text-dim">
+            [{resolved.lat.toFixed(5)}, {resolved.lng.toFixed(5)}]
+          </p>
+          {resolved.matchLabel && (
+            <p className="font-mono text-xs text-teal font-medium">
+              {resolved.matchLabel}
+            </p>
+          )}
+        </div>
+
+        {/* Zone override dropdown — still editable after GPS match */}
+        <div>
+          <Label htmlFor="zone-override">Zone (auto-matched — override if needed)</Label>
+          <select
+            id="zone-override"
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            disabled={zonesLoading}
+            className="w-full font-body text-sm bg-bg border border-border rounded-radius px-3 py-2.5 text-text focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors duration-150 disabled:opacity-60"
+          >
+            <option value="">
+              {zonesLoading ? 'Loading zones…' : 'Select zone…'}
+            </option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.name}>{z.name}</option>
+            ))}
+            <option value="Other / Unknown">Other / Unknown</option>
+          </select>
+        </div>
+
+        {error && <FieldError message={error} />}
+      </div>
+    );
+  }
+
+  // ── Detection / initial state — show detect button + fallback ──────────
+  return (
+    <div className="space-y-3">
+      <p className="font-body font-medium text-sm text-text">
+        Location <span className="text-red" aria-hidden="true">*</span>
+      </p>
+
+      {/* Detect button — only render if GPS is supported */}
+      {gpsSupported !== false && (
+        <DetectButton onClick={handleDetect} detecting={detecting} />
+      )}
+
+      {/* GPS not supported at all */}
+      {gpsSupported === false && (
+        <div className="bg-amber-light border border-amber/20 rounded-radius px-3 py-2.5">
+          <p className="font-body text-xs text-amber">
+            GPS not available on this device. Please select your zone below.
+          </p>
+        </div>
+      )}
+
+      {/* GPS error or denied */}
+      {gpsError && (
+        <div className="bg-amber-light border border-amber/20 rounded-radius px-3 py-2.5" role="alert">
+          <p className="font-body text-xs text-amber leading-relaxed">{gpsError}</p>
+        </div>
+      )}
+
+      {/* Divider — only when GPS is available */}
+      {gpsSupported !== false && (
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-border" />
+          <span className="font-mono text-xs text-text-dim">or select manually</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+      )}
+
+      {/* Fallback accuracy warning — show when GPS was denied or unsupported */}
+      {(usingFallback || gpsSupported === false) && (
+        <div className="bg-amber-light border border-amber/20 rounded-radius px-3 py-2">
+          <p className="font-mono text-xs text-amber">
+            Using zone centre as location — lower accuracy
+          </p>
+        </div>
+      )}
+
+      {/* Zone dropdown — always present as fallback */}
+      <div>
+        <Label htmlFor="zone-fallback">Select your zone</Label>
+        <select
+          id="zone-fallback"
+          value={selectedZone}
+          onChange={(e) => handleZoneChange(e.target.value)}
+          disabled={zonesLoading}
+          className={`w-full font-body text-sm bg-bg border rounded-radius px-3 py-2.5 text-text focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors duration-150 disabled:opacity-60 ${
+            error ? 'border-red' : 'border-border hover:border-border-dark'
+          }`}
+        >
+          <option value="">
+            {zonesLoading ? 'Loading zones…' : zones.length === 0 ? 'No zones configured' : 'Select zone…'}
+          </option>
+          {zones.map((z) => (
+            <option key={z.id} value={z.name}>{z.name}</option>
+          ))}
+          <option value="Other / Unknown">Other / Unknown</option>
+        </select>
+        {error && <FieldError message={error} />}
+      </div>
     </div>
   );
 }
@@ -131,7 +502,7 @@ function SuccessState({ incidentId, onReset }) {
   );
 }
 
-/* ── Main Form ───────────────────────────────────────────────────────────── */
+/* ── Main Report Page ────────────────────────────────────────────────────── */
 export default function ReportPage() {
   const { zones, loading: zonesLoading } = useZones();
   const [form, setForm]                  = useState(INITIAL_FORM);
@@ -139,6 +510,10 @@ export default function ReportPage() {
   const [submitting, setSubmitting]      = useState(false);
   const [submitError, setSubmitError]    = useState(null);
   const [successId, setSuccessId]        = useState(null);
+
+  // Resolved location from LocationSection: { lat, lng, zone_name } | null
+  const [resolvedLocation, setResolvedLocation] = useState(null);
+
   const formId = useId();
 
   function setField(name, value) {
@@ -146,11 +521,30 @@ export default function ReportPage() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   }
 
+  // Called by LocationSection whenever location state changes
+  const handleLocationResolved = useCallback((location) => {
+    setResolvedLocation(location);
+    // Sync zone_name into form state so validation sees it
+    if (location?.zone_name) {
+      setForm((prev) => ({ ...prev, zone_name: location.zone_name }));
+    } else {
+      setForm((prev) => ({ ...prev, zone_name: '' }));
+    }
+    // Clear location error on resolution
+    if (location) {
+      setErrors((prev) => ({ ...prev, location: undefined, zone_name: undefined }));
+    }
+  }, []);
+
   function validate() {
     const e = {};
-    if (!form.type)        e.type        = 'Please select an incident type.';
-    if (!form.severity)    e.severity    = 'Please select a severity level.';
-    if (!form.zone_name)   e.zone_name   = 'Please select the affected zone.';
+    if (!form.type)
+      e.type = 'Please select an incident type.';
+    if (!form.severity)
+      e.severity = 'Please select a severity level.';
+    // Location: either GPS resolved OR zone manually selected
+    if (!resolvedLocation && !form.zone_name)
+      e.location = 'Please provide your location — use GPS or select a zone.';
     if (!form.description || form.description.trim().length < 10)
       e.description = 'Please provide at least 10 characters of description.';
     if (form.reporter_phone && !/^[+\d\s\-()]{7,15}$/.test(form.reporter_phone))
@@ -163,50 +557,64 @@ export default function ReportPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // Honeypot: if filled, silently discard (bot protection)
+    // Honeypot — silently discard bot submissions
     if (form._honeypot) return;
 
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      // Focus first error field
-      const first = document.getElementById(`${formId}-${Object.keys(errs)[0]}`);
-      first?.focus();
+      const firstKey  = Object.keys(errs)[0];
+      const firstEl   = document.getElementById(`${formId}-${firstKey}`);
+      firstEl?.focus();
       return;
     }
 
     setSubmitting(true);
     setSubmitError(null);
+
     try {
       const id = await createIncident({
         type:            form.type,
         severity:        form.severity,
-        zone_name:       form.zone_name,
+        zone_name:       resolvedLocation?.zone_name || form.zone_name,
         description:     form.description.trim(),
         reporter_phone:  form.reporter_phone.trim() || null,
         people_affected: form.people_affected ? Number(form.people_affected) : 0,
-        lat:             0,
-        lng:             0,
+        // Use GPS coordinates if resolved, otherwise zone center, otherwise 0
+        lat:             resolvedLocation?.lat ?? 0,
+        lng:             resolvedLocation?.lng ?? 0,
+        location_display: resolvedLocation?.displayName ?? null,
+        location_source:  resolvedLocation?.lat ? 'gps' : 'zone',
       });
       setSuccessId(id);
     } catch (err) {
-      console.error(err);
+      console.error('[NairobiAlert] Report submission error:', err);
       setSubmitError('Failed to submit report. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
+  function handleReset() {
+    setSuccessId(null);
+    setForm(INITIAL_FORM);
+    setErrors({});
+    setResolvedLocation(null);
+    setSubmitError(null);
+  }
+
+  // ── Success screen ──────────────────────────────────────────────────────
   if (successId) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="bg-white border border-border rounded-radius-lg shadow-md">
-          <SuccessState incidentId={successId} onReset={() => { setSuccessId(null); setForm(INITIAL_FORM); }} />
+          <SuccessState incidentId={successId} onReset={handleReset} />
         </div>
       </div>
     );
   }
 
+  // ── Main form ───────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
       {/* Header */}
@@ -225,7 +633,7 @@ export default function ReportPage() {
         aria-label="Incident report form"
         className="bg-white border border-border rounded-radius-lg shadow-sm p-6 sm:p-8 space-y-6"
       >
-        {/* Honeypot — hidden from real users, bots fill it */}
+        {/* Honeypot — visually hidden, never submitted */}
         <div aria-hidden="true" className="absolute opacity-0 pointer-events-none h-0 overflow-hidden">
           <label htmlFor={`${formId}-_honeypot`}>Leave this empty</label>
           <input
@@ -239,7 +647,7 @@ export default function ReportPage() {
           />
         </div>
 
-        {/* Incident Type */}
+        {/* ── Incident Type ─────────────────────────────────────────────── */}
         <div>
           <Label htmlFor={`${formId}-type`} required>Incident Type</Label>
           <select
@@ -260,37 +668,22 @@ export default function ReportPage() {
           <FieldError message={errors.type} />
         </div>
 
-        {/* Severity */}
+        {/* ── Severity ──────────────────────────────────────────────────── */}
         <SeveritySelector
           value={form.severity}
           onChange={(v) => setField('severity', v)}
           error={errors.severity}
         />
 
-        {/* Zone */}
-        <div>
-          <Label htmlFor={`${formId}-zone_name`} required>Affected Zone / Area</Label>
-          <select
-            id={`${formId}-zone_name`}
-            value={form.zone_name}
-            onChange={(e) => setField('zone_name', e.target.value)}
-            disabled={zonesLoading}
-            className={`w-full font-body text-sm bg-bg border rounded-radius px-3 py-2.5 text-text focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors duration-150 disabled:opacity-60 ${
-              errors.zone_name ? 'border-red' : 'border-border hover:border-border-dark'
-            }`}
-          >
-            <option value="">
-              {zonesLoading ? 'Loading zones…' : zones.length === 0 ? 'No zones configured' : 'Select zone…'}
-            </option>
-            {zones.map((z) => (
-              <option key={z.id} value={z.name}>{z.name}</option>
-            ))}
-            <option value="Other / Unknown">Other / Unknown</option>
-          </select>
-          <FieldError message={errors.zone_name} />
-        </div>
+        {/* ── Location — three-tier resolver ────────────────────────────── */}
+        <LocationSection
+          zones={zones}
+          zonesLoading={zonesLoading}
+          onResolved={handleLocationResolved}
+          error={errors.location || errors.zone_name}
+        />
 
-        {/* Description */}
+        {/* ── Description ───────────────────────────────────────────────── */}
         <div>
           <Label htmlFor={`${formId}-description`} required>Description</Label>
           <textarea
@@ -312,7 +705,7 @@ export default function ReportPage() {
           </div>
         </div>
 
-        {/* Optional fields */}
+        {/* ── Optional fields ───────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor={`${formId}-reporter_phone`}>Your Phone (optional)</Label>
@@ -347,14 +740,17 @@ export default function ReportPage() {
           </div>
         </div>
 
-        {/* Submit error */}
+        {/* ── Submit error ──────────────────────────────────────────────── */}
         {submitError && (
-          <div className="bg-red-light border border-red/20 rounded-radius px-4 py-3 font-body text-sm text-red" role="alert">
+          <div
+            className="bg-red-light border border-red/20 rounded-radius px-4 py-3 font-body text-sm text-red"
+            role="alert"
+          >
             {submitError}
           </div>
         )}
 
-        {/* Submit */}
+        {/* ── Submit ────────────────────────────────────────────────────── */}
         <button
           type="submit"
           disabled={submitting}
@@ -377,7 +773,7 @@ export default function ReportPage() {
         </p>
       </form>
 
-      {/* SMS/USSD alternative */}
+      {/* SMS/USSD fallback for no-internet users */}
       <div className="mt-6 bg-teal-light border border-teal/20 rounded-radius p-4">
         <p className="font-body font-semibold text-sm text-teal mb-1">No internet access?</p>
         <p className="font-body text-xs text-text-mid leading-relaxed">

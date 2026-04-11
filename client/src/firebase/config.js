@@ -1,10 +1,10 @@
 // File: src/firebase/config.js
-// Purpose: Initialize Firebase app with environment variable config — no hardcoded credentials
+// Purpose: Initialize Firebase app with environment variable config and IndexedDB offline persistence
 // Dependencies: firebase/app, firebase/auth, firebase/firestore
 
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 // All values must be set in .env (see .env.example)
 const firebaseConfig = {
@@ -19,4 +19,23 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db   = getFirestore(app);
+
+// Enable offline persistence via IndexedDB.
+// This means reports submitted on poor/no connectivity queue locally
+// and sync to Firestore automatically when the connection returns.
+// Critical for users in Mathare, Kibera, Mukuru on 2G networks.
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    // Multiple tabs open — persistence can only be enabled in one tab at a time.
+    // Non-fatal: app continues working, just without offline queuing in this tab.
+    console.warn('[NairobiAlert] Firestore offline persistence unavailable: multiple tabs open.');
+  } else if (err.code === 'unimplemented') {
+    // Browser does not support IndexedDB (very old browsers, some privacy modes).
+    // Non-fatal: app continues working online-only.
+    console.warn('[NairobiAlert] Firestore offline persistence not supported in this browser.');
+  } else {
+    console.error('[NairobiAlert] Firestore persistence error:', err);
+  }
+});
+
 export default app;

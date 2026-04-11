@@ -8,6 +8,7 @@ import { useAllIncidents } from '../../hooks/useIncidents';
 import { useAuth } from '../../hooks/useAuth';
 import { verifyIncident, rejectIncident, resolveIncident } from '../../firebase/incidents';
 import StatusBadge from '../../components/StatusBadge';
+import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
 
 const STATUS_TABS = ['pending', 'open', 'rejected', 'resolved'];
 
@@ -58,8 +59,135 @@ function ActionButtons({ incident, onVerify, onReject, onResolve, busy }) {
   return <span className="font-mono text-xs text-text-dim">—</span>;
 }
 
+/* ── Incident Location Panel ─────────────────────────────────────────────── */
+// Shown when admin expands a row — mini map + address details
+function LocationPanel({ incident }) {
+  const hasCoords = incident.lat && incident.lat !== 0 && incident.lng && incident.lng !== 0;
+
+  if (!hasCoords) {
+    return (
+      <div className="px-4 py-3 bg-amber-light border-t border-amber/20">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-amber flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          <p className="font-body text-xs text-amber">
+            No location data captured for this report. Zone: <span className="font-medium">{incident.zone_name}</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-4 bg-bg border-t border-border">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Mini map */}
+        <div className="overflow-hidden rounded-radius border border-border shadow-sm" style={{ height: '180px' }}>
+          <MapContainer
+            center={[incident.lat, incident.lng]}
+            zoom={15}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+            dragging={false}
+            scrollWheelZoom={false}
+            doubleClickZoom={false}
+            touchZoom={false}
+            attributionControl={false}
+          >
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              subdomains="abcd"
+              maxZoom={20}
+            />
+            <CircleMarker
+              center={[incident.lat, incident.lng]}
+              radius={10}
+              pathOptions={{
+                color:       '#0a7e6e',
+                fillColor:   '#0a7e6e',
+                fillOpacity: 0.75,
+                weight:      2,
+              }}
+            />
+          </MapContainer>
+        </div>
+
+        {/* Location details */}
+        <div className="space-y-3 flex flex-col justify-center">
+          {/* Address */}
+          <div>
+            <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-1">
+              Address
+            </p>
+            <p className="font-body text-sm text-text leading-relaxed">
+              {incident.location_display ?? 'Address not captured'}
+            </p>
+          </div>
+
+          {/* Coordinates */}
+          <div>
+            <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-1">
+              Coordinates
+            </p>
+            <p className="font-mono text-sm text-text">
+              {incident.lat?.toFixed(6)}, {incident.lng?.toFixed(6)}
+            </p>
+          </div>
+
+          {/* Location source badge */}
+          <div>
+            <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-1">
+              Location Source
+            </p>
+            <span className={`inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-full border ${
+              incident.location_source === 'gps'
+                ? 'bg-teal-light text-teal border-teal/20'
+                : incident.location_source === 'zone'
+                ? 'bg-amber-light text-amber border-amber/20'
+                : 'bg-border text-text-dim border-border-dark'
+            }`}>
+              {incident.location_source === 'gps' && (
+                <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                </svg>
+              )}
+              {incident.location_source === 'gps'
+                ? 'GPS — High accuracy'
+                : incident.location_source === 'zone'
+                ? 'Zone centre — Lower accuracy'
+                : 'Unknown source'}
+            </span>
+          </div>
+
+          {/* Open in Google Maps */}
+          <a
+            href={`https://www.google.com/maps?q=${incident.lat},${incident.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-body text-xs font-medium text-teal hover:text-teal-dark transition-colors duration-150"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+              <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+            </svg>
+            Open in Google Maps
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Incidents Table ─────────────────────────────────────────────────────── */
 function IncidentsTable({ incidents, onVerify, onReject, onResolve, busy }) {
+  // Track which row is expanded to show location panel
+  const [expandedId, setExpandedId] = useState(null);
+
+  function toggleExpand(id) {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }
+
   if (incidents.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -73,54 +201,135 @@ function IncidentsTable({ incidents, onVerify, onReject, onResolve, busy }) {
       <table className="w-full min-w-[640px]" aria-label="Incidents table">
         <thead className="bg-bg border-b border-border">
           <tr>
-            {['Type', 'Zone', 'Severity', 'Status', 'Description', 'People', 'Source', 'Reported', 'Actions'].map((h) => (
+            {[
+              { label: 'Type',        className: '' },
+              { label: 'Zone',        className: '' },
+              { label: 'Severity',    className: '' },
+              { label: 'Status',      className: '' },
+              { label: 'Description', className: 'hidden lg:table-cell' },
+              { label: 'Location',    className: 'hidden md:table-cell' },
+              { label: 'People',      className: 'hidden xl:table-cell' },
+              { label: 'Source',      className: 'hidden xl:table-cell' },
+              { label: 'Reported',    className: 'hidden md:table-cell' },
+              { label: 'Actions',     className: '' },
+            ].map(({ label, className }) => (
               <th
-                key={h}
-                className={`px-3 py-2 text-left font-mono text-xs text-text-dim uppercase tracking-wider whitespace-nowrap ${
-                  h === 'Description' ? 'hidden lg:table-cell' :
-                  h === 'People'      ? 'hidden xl:table-cell' :
-                  h === 'Source'      ? 'hidden xl:table-cell' :
-                  h === 'Reported'    ? 'hidden md:table-cell' : ''
-                }`}
+                key={label}
+                className={`px-3 py-2 text-left font-mono text-xs text-text-dim uppercase tracking-wider whitespace-nowrap ${className}`}
               >
-                {h}
+                {label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {incidents.map((inc) => (
-            <tr key={inc.id} className="border-b border-border hover:bg-teal-light/10 transition-colors duration-100">
-              <td className="px-3 py-3 font-body text-xs font-medium text-text capitalize">{inc.type}</td>
-              <td className="px-3 py-3 font-body text-xs text-text-mid whitespace-nowrap">{inc.zone_name}</td>
-              <td className="px-3 py-3">
-                <StatusBadge variant="severity" value={inc.severity} />
-              </td>
-              <td className="px-3 py-3">
-                <StatusBadge variant="status" value={inc.status} />
-              </td>
-              <td className="px-3 py-3 hidden lg:table-cell max-w-xs">
-                <p className="font-body text-xs text-text-mid line-clamp-2">{inc.description}</p>
-              </td>
-              <td className="px-3 py-3 hidden xl:table-cell font-mono text-xs text-text-mid">
-                {inc.people_affected || '—'}
-              </td>
-              <td className="px-3 py-3 hidden xl:table-cell">
-                <span className="font-mono text-xs text-text-dim uppercase">{inc.source}</span>
-              </td>
-              <td className="px-3 py-3 hidden md:table-cell font-mono text-xs text-text-dim whitespace-nowrap">
-                {formatTime(inc.created_at)}
-              </td>
-              <td className="px-3 py-3">
-                <ActionButtons
-                  incident={inc}
-                  onVerify={onVerify}
-                  onReject={onReject}
-                  onResolve={onResolve}
-                  busy={busy}
-                />
-              </td>
-            </tr>
+            <>
+              {/* ── Main row ─────────────────────────────────────────────── */}
+              <tr
+                key={inc.id}
+                className={`border-b border-border transition-colors duration-100 cursor-pointer ${
+                  expandedId === inc.id
+                    ? 'bg-teal-light/20'
+                    : 'hover:bg-teal-light/10'
+                }`}
+                onClick={() => toggleExpand(inc.id)}
+              >
+                {/* Type */}
+                <td className="px-3 py-3 font-body text-xs font-medium text-text capitalize">
+                  {inc.type}
+                </td>
+
+                {/* Zone + location source badge */}
+                <td className="px-3 py-3">
+                  <p className="font-body text-xs text-text-mid whitespace-nowrap">
+                    {inc.zone_name}
+                  </p>
+                  {inc.location_source && (
+                    <span className={`font-mono text-xs px-1.5 py-0.5 rounded-full ${
+                      inc.location_source === 'gps'
+                        ? 'bg-teal-light text-teal'
+                        : 'bg-amber-light text-amber'
+                    }`}>
+                      {inc.location_source === 'gps' ? 'GPS' : 'Zone'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Severity */}
+                <td className="px-3 py-3">
+                  <StatusBadge variant="severity" value={inc.severity} />
+                </td>
+
+                {/* Status */}
+                <td className="px-3 py-3">
+                  <StatusBadge variant="status" value={inc.status} />
+                </td>
+
+                {/* Description */}
+                <td className="px-3 py-3 hidden lg:table-cell max-w-xs">
+                  <p className="font-body text-xs text-text-mid line-clamp-2">
+                    {inc.description}
+                  </p>
+                </td>
+
+                {/* Location — coordinates + address snippet */}
+                <td className="px-3 py-3 hidden md:table-cell">
+                  {inc.lat && inc.lat !== 0 ? (
+                    <div className="space-y-0.5">
+                      <p className="font-body text-xs text-text-mid line-clamp-1 max-w-[160px]">
+                        {inc.location_display ?? 'Address not captured'}
+                      </p>
+                      <p className="font-mono text-xs text-text-dim">
+                        [{inc.lat?.toFixed(4)}, {inc.lng?.toFixed(4)}]
+                      </p>
+                    </div>
+                  ) : (
+                    <span className="font-mono text-xs text-text-dim">No location</span>
+                  )}
+                </td>
+
+                {/* People affected */}
+                <td className="px-3 py-3 hidden xl:table-cell font-mono text-xs text-text-mid">
+                  {inc.people_affected || '—'}
+                </td>
+
+                {/* Source */}
+                <td className="px-3 py-3 hidden xl:table-cell">
+                  <span className="font-mono text-xs text-text-dim uppercase">
+                    {inc.source}
+                  </span>
+                </td>
+
+                {/* Reported time */}
+                <td className="px-3 py-3 hidden md:table-cell font-mono text-xs text-text-dim whitespace-nowrap">
+                  {formatTime(inc.created_at)}
+                </td>
+
+                {/* Actions — stop propagation so click doesn't toggle expand */}
+                <td
+                  className="px-3 py-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ActionButtons
+                    incident={inc}
+                    onVerify={onVerify}
+                    onReject={onReject}
+                    onResolve={onResolve}
+                    busy={busy}
+                  />
+                </td>
+              </tr>
+
+              {/* ── Expanded location panel ───────────────────────────────── */}
+              {expandedId === inc.id && (
+                <tr key={`${inc.id}-expanded`}>
+                  <td colSpan={10} className="p-0">
+                    <LocationPanel incident={inc} />
+                  </td>
+                </tr>
+              )}
+            </>
           ))}
         </tbody>
       </table>

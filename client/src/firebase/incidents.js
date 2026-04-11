@@ -77,6 +77,8 @@ export async function createIncident(payload) {
     people_affected:  payload.people_affected ? Number(payload.people_affected) : 0,
     lat:              payload.lat ?? 0,
     lng:              payload.lng ?? 0,
+    location_display: payload.location_display ?? null,
+    location_source:  payload.location_source ?? 'unknown',
     source:           'web',
     status:           'pending',
     created_at:       serverTimestamp(),

@@ -16,36 +16,35 @@ service cloud.firestore {
 
     // Validate incident fields on creation (public report form)
     function validIncidentCreate() {
-      let data = request.resource.data;
-      return
-        // Required string fields
-        data.type is string && data.type.size() > 0 &&
-        data.type in ['flood', 'landslide', 'blocked', 'rescue', 'shelter', 'other'] &&
+    let data = request.resource.data;
+    return
+      data.type is string && data.type.size() > 0 &&
+      data.type in ['flood', 'landslide', 'blocked', 'rescue', 'shelter', 'other'] &&
 
-        data.severity is string &&
-        data.severity in ['critical', 'warning', 'info'] &&
+      data.severity is string &&
+      data.severity in ['critical', 'warning', 'info'] &&
 
-        data.zone_name is string && data.zone_name.size() > 0 &&
+      data.zone_name is string && data.zone_name.size() > 0 &&
 
-        data.description is string && data.description.size() >= 10 &&
+      data.description is string && data.description.size() >= 10 &&
 
-        data.source is string && data.source in ['web', 'sms', 'ussd', 'admin'] &&
+      data.source is string && data.source in ['web', 'sms', 'ussd', 'admin'] &&
 
-        // Status must always be pending on creation
-        data.status == 'pending' &&
+      data.status == 'pending' &&
 
-        // Numeric fields
-        data.people_affected is int && data.people_affected >= 0 &&
-        data.lat is number &&
-        data.lng is number &&
+      data.people_affected is int && data.people_affected >= 0 &&
 
-        // created_at must be server timestamp
-        data.created_at == request.time &&
+      // ── FIX: accept both int and float for coordinates ──
+      (data.lat is float || data.lat is int) &&
+      (data.lng is float || data.lng is int) &&
 
-        // Nullable fields must exist with correct types or null
-        (data.reporter_phone == null || data.reporter_phone is string) &&
-        (data.verified_by == null) &&
-        (data.verified_at == null);
+      data.created_at == request.time &&
+
+      (data.reporter_phone == null || data.reporter_phone is string) &&
+      (data.verified_by == null) &&
+      (data.verified_at == null);
+      (data.location_display == null || data.location_display is string) &&
+      (data.location_source == null || data.location_source is string);
     }
 
     // Validate incident fields on update (admin verify/reject/resolve)
