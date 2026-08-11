@@ -874,6 +874,11 @@ Every page component is lazy-loaded via `React.lazy` + `Suspense`. The initial b
 
 ## Contributing
 
+> **Engineering reference:** for module-by-module internals, the exact
+> Firestore data model, the team dispatch system, security-rule caveats, and
+> known gaps between this README and the shipped code, see
+> [`docs/TECHNICAL_DOCUMENTATION.md`](docs/TECHNICAL_DOCUMENTATION.md).
+
 ### Branch Strategy
 
 | Branch pattern | Purpose |
